@@ -12,7 +12,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 // --- CORS Setup for Vercel/Render ---
 const allowedOrigins = [
   'http://localhost:5173', 
-  'https://your-gapanalyze-app.vercel.app' // REPLACE this with your actual Vercel URL
+  'https://project-gap-analyze.vercel.app' // Your live Vercel frontend URL
 ];
 
 app.use(cors({
