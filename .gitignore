@@ -1,0 +1,18 @@
+# Node
+node_modules/
+npm-debug.log
+
+# Env files
+.env
+.env.*
+
+# Python (if backend uses it)
+venv/
+__pycache__/
+
+# Build folders
+dist/
+build/
+
+# OS
+.DS_Store
