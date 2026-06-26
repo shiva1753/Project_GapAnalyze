@@ -29,6 +29,11 @@ app.use(cors({
 
 app.use(express.json());
 
+// --- Heartbeat Ping Route ---
+app.get('/ping', (req, res) => {
+  res.status(200).json({ message: 'Server is awake!' });
+});
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -181,8 +186,3 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
   console.log(`Server running on port ${PORT}`)
 );
-
-// --- Heartbeat Ping Route ---
-app.get('/ping', (req, res) => {
-  res.status(200).json({ message: 'Server is awake!' });
-});
