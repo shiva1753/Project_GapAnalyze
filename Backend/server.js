@@ -11,34 +11,42 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // --- CORS Setup for Vercel/Render ---
 const allowedOrigins = [
-  'http://localhost:5173', 
+  'http://localhost:5173',
   'https://project-gap-analyze.vercel.app',
-  'https://project-gap-analyze-6pju5p8gc-ranashivansh175-7115s-projects.vercel.app'
+  'https://project-gap-analyze-6pju5p8gc-ranashivansh175-7115s-projects.vercel.app',
+  'https://project-gap-analyze-two.vercel.app'
 ];
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // allow requests with no origin (like mobile apps or curl requests)
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (curl, Postman, etc.)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.error('Blocked by CORS:', origin);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true
+  })
+);
 
 app.use(express.json());
 
 // --- Heartbeat Ping Route ---
 app.get('/ping', (req, res) => {
-  res.status(200).json({ message: 'Server is awake!' });
+  res.status(200).json({
+    message: 'Server is awake!'
+  });
 });
 
+// --- OpenAI ---
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY
 });
 
+// --- Analyze Resume ---
 app.post('/api/analyze', upload.single('resumeFile'), async (req, res) => {
   try {
     const jobDescription = (req.body.jobDescription || '').trim();
@@ -52,26 +60,29 @@ app.post('/api/analyze', upload.single('resumeFile'), async (req, res) => {
         const pdfData = await pdfParse(buffer);
         resumeText = pdfData.text.trim();
       } else if (
-        mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+        mimetype ===
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
         mimetype === 'application/msword'
       ) {
         const docxData = await mammoth.extractRawText({ buffer });
         resumeText = docxData.value.trim();
       } else {
         return res.status(400).json({
-          error: 'Unsupported file type. Upload PDF, DOC, or DOCX.',
+          error: 'Unsupported file type. Upload PDF, DOC, or DOCX.'
         });
       }
     }
 
     // --- Validation ---
     if (!jobDescription) {
-      return res.status(400).json({ error: 'Job description is required.' });
+      return res.status(400).json({
+        error: 'Job description is required.'
+      });
     }
 
     if (!resumeText) {
       return res.status(400).json({
-        error: 'Resume text missing. Paste it or upload file.',
+        error: 'Resume text missing. Paste it or upload file.'
       });
     }
 
@@ -94,96 +105,186 @@ ${resumeText}
     // --- OpenAI API Call with Structured Outputs ---
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
+
       messages: [
         {
           role: 'system',
-          content: 'You are an expert ATS analysis assistant.',
+          content: 'You are an expert ATS analysis assistant.'
         },
         {
           role: 'user',
-          content: prompt,
-        },
+          content: prompt
+        }
       ],
+
       response_format: {
         type: 'json_schema',
         json_schema: {
           name: 'resume_analysis_schema',
           strict: true,
+
           schema: {
             type: 'object',
+
             properties: {
-              matchScore: { type: 'number' },
-              scoreFooter: { type: 'string' },
-              summaryQuote: { type: 'string' },
-              highRelevanceTag: { type: 'string' },
-              opportunityTag: { type: 'string' },
-              matchedKeywords: { type: 'array', items: { type: 'string' } },
-              missingKeywords: { type: 'array', items: { type: 'string' } },
+              matchScore: {
+                type: 'number'
+              },
+
+              scoreFooter: {
+                type: 'string'
+              },
+
+              summaryQuote: {
+                type: 'string'
+              },
+
+              highRelevanceTag: {
+                type: 'string'
+              },
+
+              opportunityTag: {
+                type: 'string'
+              },
+
+              matchedKeywords: {
+                type: 'array',
+                items: {
+                  type: 'string'
+                }
+              },
+
+              missingKeywords: {
+                type: 'array',
+                items: {
+                  type: 'string'
+                }
+              },
+
               bulletOptimizations: {
                 type: 'array',
                 items: {
                   type: 'object',
+
                   properties: {
-                    original: { type: 'string' },
-                    optimized: { type: 'string' }
+                    original: {
+                      type: 'string'
+                    },
+
+                    optimized: {
+                      type: 'string'
+                    }
                   },
-                  required: ['original', 'optimized'],
+
+                  required: [
+                    'original',
+                    'optimized'
+                  ],
+
                   additionalProperties: false
                 }
               },
+
               improvements: {
                 type: 'array',
                 items: {
                   type: 'object',
+
                   properties: {
-                    title: { type: 'string' },
-                    description: { type: 'string' }
+                    title: {
+                      type: 'string'
+                    },
+
+                    description: {
+                      type: 'string'
+                    }
                   },
-                  required: ['title', 'description'],
+
+                  required: [
+                    'title',
+                    'description'
+                  ],
+
                   additionalProperties: false
                 }
               },
-              roadmapTarget: { type: 'string' },
+
+              roadmapTarget: {
+                type: 'string'
+              },
+
               roadmapSteps: {
                 type: 'array',
                 items: {
                   type: 'object',
+
                   properties: {
-                    step: { type: 'number' },
-                    title: { type: 'string' },
-                    description: { type: 'string' }
+                    step: {
+                      type: 'number'
+                    },
+
+                    title: {
+                      type: 'string'
+                    },
+
+                    description: {
+                      type: 'string'
+                    }
                   },
-                  required: ['step', 'title', 'description'],
+
+                  required: [
+                    'step',
+                    'title',
+                    'description'
+                  ],
+
                   additionalProperties: false
                 }
               }
             },
+
             required: [
-              'matchScore', 'scoreFooter', 'summaryQuote', 'highRelevanceTag',
-              'opportunityTag', 'matchedKeywords', 'missingKeywords',
-              'bulletOptimizations', 'improvements', 'roadmapTarget', 'roadmapSteps'
+              'matchScore',
+              'scoreFooter',
+              'summaryQuote',
+              'highRelevanceTag',
+              'opportunityTag',
+              'matchedKeywords',
+              'missingKeywords',
+              'bulletOptimizations',
+              'improvements',
+              'roadmapTarget',
+              'roadmapSteps'
             ],
+
             additionalProperties: false
           }
         }
       },
+
       max_tokens: 1400,
-      temperature: 0.2,
+      temperature: 0.2
     });
 
+    // --- Parse OpenAI response ---
     const result = completion.choices[0].message.content;
     const analysisData = JSON.parse(result);
 
+    // --- Send result ---
     res.json(analysisData);
+
   } catch (error) {
     console.error('Backend Error:', error);
+
     res.status(500).json({
-      error: 'Failed to analyze resume.',
+      error: 'Failed to analyze resume.'
     });
   }
 });
 
+// --- Start Server ---
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () =>
-  console.log(`Server running on port ${PORT}`)
-);
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
+});
