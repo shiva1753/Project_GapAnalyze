@@ -41,6 +41,11 @@ app.get('/ping', (req, res) => {
   });
 });
 
+// --- HEAD Ping Route for Cron Job ---
+app.head('/ping', (req, res) => {
+  res.sendStatus(200);
+});
+
 // --- OpenAI ---
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
